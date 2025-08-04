@@ -1,0 +1,9 @@
+# Supabase
+.branches
+.temp
+.env
+
+# Functions
+functions/*/node_modules
+functions/*/package-lock.json
+functions/*/deno.lock

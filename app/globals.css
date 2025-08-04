@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-montserrat: 'Montserrat', sans-serif;
+  }
+
+  body {
+    @apply bg-alliance-light-gray text-black font-montserrat;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-montserrat font-black text-alliance-blue;
+  }
+
+  h1 {
+    @apply text-5xl;
+  }
+
+  h2 {
+    @apply text-4xl;
+  }
+
+  h3 {
+    @apply text-3xl;
+  }
+
+  h4 {
+    @apply text-2xl;
+  }
+
+  h5 {
+    @apply text-xl;
+  }
+
+  h6 {
+    @apply text-lg;
+  }
+}
+
+@layer components {
+  .button, .btn {
+    @apply px-6 py-3 rounded font-bold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 hover:shadow-lg;
+  }
+
+  .btn-alliance {
+    @apply bg-alliance-blue text-white hover:opacity-90 focus:ring-alliance-blue;
+  }
+
+  .btn-success {
+    @apply bg-alliance-green text-black hover:opacity-90 focus:ring-alliance-green;
+  }
+
+  .btn-secondary {
+    @apply bg-alliance-sky text-alliance-navy hover:opacity-90 focus:ring-alliance-sky;
+  }
+
+  .badge {
+    @apply inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full;
+  }
+
+  .badge.alert {
+    @apply bg-alliance-alert text-white;
+  }
+
+  .to-do-badge {
+    @apply min-w-[20px] h-5;
+  }
+
+  .card, .callout {
+    @apply bg-white rounded shadow-alliance p-6;
+  }
+
+  .input {
+    @apply w-full px-3 py-2 border border-alliance-gray rounded focus:outline-none focus:ring-2 focus:ring-alliance-blue focus:border-alliance-blue;
+  }
+
+  .label {
+    @apply block text-sm font-semibold text-black mb-1;
+  }
+
+  .navbar {
+    @apply bg-alliance-gradient text-white;
+  }
+
+  .button-icon {
+    @apply flex items-center space-x-3;
+  }
+
+  .button-icon__icon {
+    @apply text-xl;
+  }
+
+  .button-icon__text {
+    @apply font-bold;
+  }
+
+  .expanded {
+    @apply w-full;
+  }
+
+  .alliance-page-header {
+    @apply font-montserrat font-black text-alliance-blue;
+  }
+}

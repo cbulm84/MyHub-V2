@@ -4,7 +4,8 @@ import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { getUser, getCurrentEmployee, canUserEdit } from '@/lib/supabase/server'
 import { createServerClient } from '@/lib/supabase/server'
 
-export default async function MarketDetailPage({ params }: { params: { id: string } }) {
+export default async function MarketDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const user = await getUser()
   
   if (!user) {
@@ -20,7 +21,7 @@ export default async function MarketDetailPage({ params }: { params: { id: strin
     redirect('/login')
   }
 
-  const marketId = parseInt(params.id)
+  const marketId = parseInt(id)
   const supabase = await createServerClient()
 
   // Fetch market details

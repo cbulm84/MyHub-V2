@@ -3,10 +3,11 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const employeeId = parseInt(params.id)
+    const { id } = await params
+    const employeeId = parseInt(id)
     const body = await request.json()
     const { 
       first_name, 
@@ -95,10 +96,11 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const employeeId = parseInt(params.id)
+    const { id } = await params
+    const employeeId = parseInt(id)
 
     // Get the employee to find their auth_user_id
     const { data: employee, error: fetchError } = await supabaseAdmin

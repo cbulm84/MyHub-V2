@@ -18,7 +18,6 @@ export default function NewLocationPage() {
     location_id: '',
     name: '',
     store_number: '',
-    location_type: 'STORE' as 'STORE' | 'OFFICE' | 'WAREHOUSE' | 'OTHER',
     district_id: null as number | null,
     address_line_1: '',
     address_line_2: '',
@@ -68,25 +67,42 @@ export default function NewLocationPage() {
 
       const nextId = maxId ? maxId.location_id + 1 : 10000
 
-      // Create location
-      const { error } = await supabase
+      // First create address
+      const { data: addressData, error: addressError } = await supabase
+        .from('addresses')
+        .insert({
+          address_type: 'BUSINESS',
+          street_line1: formData.address_line_1,
+          street_line2: formData.address_line_2 || null,
+          city: formData.city,
+          state_province: formData.state,
+          postal_code: formData.postal_code,
+          country_code: 'US',
+          phone: formData.phone || null,
+          is_active: true
+        })
+        .select()
+        .single()
+
+      if (addressError) throw addressError
+
+      // Then create location with address_id
+      const { error: locationError } = await supabase
         .from('locations')
         .insert({
           location_id: nextId,
           name: formData.name,
           store_number: formData.store_number || null,
-          location_type: formData.location_type,
-          district_id: formData.district_id,
-          address_line_1: formData.address_line_1,
-          address_line_2: formData.address_line_2 || null,
-          city: formData.city,
-          state: formData.state,
-          postal_code: formData.postal_code,
-          phone: formData.phone || null,
+          district_id: parseInt(formData.district_id),
+          address_id: addressData.id,
           is_active: formData.is_active,
+          in_footprint: true,
+          timezone: 'America/New_York',
+          gl_code: null,
+          metadata: {}
         })
 
-      if (error) throw error
+      if (locationError) throw locationError
 
       router.push('/locations')
     } catch (error: any) {
@@ -150,25 +166,6 @@ export default function NewLocationPage() {
                     </div>
                   </div>
 
-                  <div className="sm:col-span-3">
-                    <label htmlFor="location_type" className="block text-sm font-medium text-gray-700">
-                      Location type
-                    </label>
-                    <div className="mt-1">
-                      <select
-                        id="location_type"
-                        name="location_type"
-                        value={formData.location_type}
-                        onChange={(e) => setFormData({ ...formData, location_type: e.target.value as any })}
-                        className="shadow-sm focus:ring-alliance-blue focus:border-alliance-blue block w-full sm:text-sm border-gray-300 rounded-md"
-                      >
-                        <option value="STORE">Store</option>
-                        <option value="OFFICE">Office</option>
-                        <option value="WAREHOUSE">Warehouse</option>
-                        <option value="OTHER">Other</option>
-                      </select>
-                    </div>
-                  </div>
 
                   <div className="sm:col-span-3">
                     <label htmlFor="district_id" className="block text-sm font-medium text-gray-700">

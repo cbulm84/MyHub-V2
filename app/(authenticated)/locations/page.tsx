@@ -28,7 +28,7 @@ export default async function LocationsPage() {
     .from('locations')
     .select(`
       *,
-      manager:employees!location_manager_employee_id (
+      manager:employees!fk_locations_manager (
         employee_id,
         first_name,
         last_name
@@ -48,7 +48,7 @@ export default async function LocationsPage() {
         district_id,
         name,
         region_id,
-        manager:employees!district_manager_employee_id (
+        manager:employees!fk_districts_manager (
           employee_id,
           first_name,
           last_name

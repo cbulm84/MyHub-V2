@@ -57,6 +57,13 @@ export default function NewLocationPage() {
     setSaving(true)
 
     try {
+      // Validate required fields
+      if (!formData.district_id) {
+        alert('Please select a district')
+        setSaving(false)
+        return
+      }
+
       // Generate next location ID
       const { data: maxId } = await supabase
         .from('locations')
@@ -93,7 +100,7 @@ export default function NewLocationPage() {
           location_id: nextId,
           name: formData.name,
           store_number: formData.store_number || null,
-          district_id: parseInt(formData.district_id),
+          district_id: formData.district_id,
           address_id: addressData.id,
           is_active: formData.is_active,
           in_footprint: true,
@@ -175,11 +182,12 @@ export default function NewLocationPage() {
                       <select
                         id="district_id"
                         name="district_id"
+                        required
                         value={formData.district_id || ''}
                         onChange={(e) => setFormData({ ...formData, district_id: e.target.value ? parseInt(e.target.value) : null })}
                         className="shadow-sm focus:ring-alliance-blue focus:border-alliance-blue block w-full sm:text-sm border-gray-300 rounded-md"
                       >
-                        <option value="">No District</option>
+                        <option value="">Select a District</option>
                         {districts.map((district) => (
                           <option key={district.district_id} value={district.district_id}>
                             {district.name}

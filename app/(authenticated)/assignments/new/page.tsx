@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
@@ -73,14 +73,7 @@ export default function NewAssignmentPage() {
     if (jobData) setJobTitles(jobData)
   }
 
-  // Fetch potential supervisors when location changes
-  useEffect(() => {
-    if (formData.location_id) {
-      fetchSupervisors()
-    }
-  }, [formData.location_id])
-
-  const fetchSupervisors = async () => {
+  const fetchSupervisors = useCallback(async () => {
     if (!formData.location_id) return
 
     // Get employees at this location who could be supervisors
@@ -88,7 +81,7 @@ export default function NewAssignmentPage() {
       .from('employee_assignments')
       .select(`
         employee_id,
-        employees!inner (
+        employees!employee_assignments_employee_id_fkey (
           employee_id,
           first_name,
           last_name,
@@ -101,14 +94,21 @@ export default function NewAssignmentPage() {
 
     if (data) {
       const uniqueSupervisors = data.reduce((acc, item) => {
-        if (!acc.find(e => e.employee_id === item.employees.employee_id)) {
+        if (!acc.find((e: any) => e.employee_id === item.employees?.employee_id)) {
           acc.push(item.employees)
         }
         return acc
       }, [] as any[])
       setSupervisors(uniqueSupervisors)
     }
-  }
+  }, [formData.location_id, formData.employee_id])
+
+  // Fetch potential supervisors when location changes
+  useEffect(() => {
+    if (formData.location_id) {
+      fetchSupervisors()
+    }
+  }, [formData.location_id, fetchSupervisors])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

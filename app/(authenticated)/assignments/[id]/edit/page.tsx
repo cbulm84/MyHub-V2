@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
@@ -12,7 +12,7 @@ type Employee = Database['public']['Tables']['employees']['Row']
 type Location = Database['public']['Tables']['locations']['Row']
 type JobTitle = Database['public']['Tables']['job_titles']['Row']
 
-export default function EditAssignmentPage({ params }: { params: { id: string } }) {
+function EditAssignmentClient({ id }: { id: string }) {
   const router = useRouter()
   const { user, loading: authLoading, userType } = useAuth()
   const [assignment, setAssignment] = useState<Assignment | null>(null)
@@ -36,26 +36,14 @@ export default function EditAssignmentPage({ params }: { params: { id: string } 
     notes: ''
   })
 
-  const assignmentId = params.id
   const canEdit = userType?.name === 'ADMIN' || userType?.name === 'HR'
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login')
-    } else if (user && !canEdit) {
-      router.push('/assignments')
-    } else if (user) {
-      fetchAssignment()
-      fetchData()
-    }
-  }, [user, authLoading, canEdit, router])
-
-  const fetchAssignment = async () => {
+  const fetchAssignment = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('employee_assignments')
         .select('*')
-        .eq('id', assignmentId)
+        .eq('id', id)
         .single()
 
       if (error) throw error
@@ -81,7 +69,18 @@ export default function EditAssignmentPage({ params }: { params: { id: string } 
     } finally {
       setLoading(false)
     }
-  }
+  }, [id, router])
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login')
+    } else if (user && !canEdit) {
+      router.push('/assignments')
+    } else if (user) {
+      fetchAssignment()
+      fetchData()
+    }
+  }, [user, authLoading, canEdit, router, id, fetchAssignment])
 
   const fetchData = async () => {
     // Fetch employees
@@ -109,14 +108,7 @@ export default function EditAssignmentPage({ params }: { params: { id: string } 
     if (jobData) setJobTitles(jobData)
   }
 
-  // Fetch potential supervisors when location changes
-  useEffect(() => {
-    if (formData.location_id) {
-      fetchSupervisors()
-    }
-  }, [formData.location_id])
-
-  const fetchSupervisors = async () => {
+  const fetchSupervisors = useCallback(async () => {
     if (!formData.location_id) return
 
     // Get employees at this location who could be supervisors
@@ -124,7 +116,7 @@ export default function EditAssignmentPage({ params }: { params: { id: string } 
       .from('employee_assignments')
       .select(`
         employee_id,
-        employees!inner (
+        employees!employee_assignments_employee_id_fkey (
           employee_id,
           first_name,
           last_name,
@@ -137,14 +129,21 @@ export default function EditAssignmentPage({ params }: { params: { id: string } 
 
     if (data) {
       const uniqueSupervisors = data.reduce((acc, item) => {
-        if (!acc.find(e => e.employee_id === item.employees.employee_id)) {
+        if (!acc.find((e: any) => e.employee_id === item.employees?.employee_id)) {
           acc.push(item.employees)
         }
         return acc
       }, [] as any[])
       setSupervisors(uniqueSupervisors)
     }
-  }
+  }, [formData.location_id, formData.employee_id])
+
+  // Fetch potential supervisors when location changes
+  useEffect(() => {
+    if (formData.location_id) {
+      fetchSupervisors()
+    }
+  }, [formData.location_id, fetchSupervisors])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -159,7 +158,7 @@ export default function EditAssignmentPage({ params }: { params: { id: string } 
           .eq('employee_id', parseInt(formData.employee_id))
           .eq('is_current', true)
           .eq('is_primary', true)
-          .neq('id', assignmentId)
+          .neq('id', id)
           .single()
 
         if (existing) {
@@ -190,7 +189,7 @@ export default function EditAssignmentPage({ params }: { params: { id: string } 
           is_current: formData.is_current,
           notes: formData.notes || null
         })
-        .eq('id', assignmentId)
+        .eq('id', id)
 
       if (error) throw error
 
@@ -440,4 +439,16 @@ export default function EditAssignmentPage({ params }: { params: { id: string } 
         </div>
       </div>
   )
+}
+
+export default function EditAssignmentPage({ params }: { params: Promise<{ id: string }> }) {
+  const [id, setId] = useState<string | null>(null)
+  
+  useEffect(() => {
+    params.then(p => setId(p.id))
+  }, [params])
+  
+  if (!id) return null
+  
+  return <EditAssignmentClient id={id} />
 }

@@ -7,7 +7,7 @@ import ModernPagination from './ModernPagination'
 
 type Employee = Database['public']['Tables']['employees']['Row']
 type EmployeeWithDetails = Employee & {
-  user_types: { name: string; description: string } | null
+  user_types: { name: string; description: string | null } | null
   current_assignments: Array<{
     employee_id?: number
     location_id: number
@@ -15,7 +15,7 @@ type EmployeeWithDetails = Employee & {
     is_primary?: boolean
     assignment_type?: string
     start_date?: string
-    locations: { name: string; store_number?: string } | null
+    locations: { name: string; store_number?: string | null } | null
     job_titles: { name: string } | null
   }> | null
 }

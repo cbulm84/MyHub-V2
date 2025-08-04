@@ -89,8 +89,9 @@ export default async function LocationDetailPage({ params }: { params: Promise<{
   const employeeMap = new Map()
   assignments?.forEach(assignment => {
     if (assignment.employees && !employeeMap.has(assignment.employee_id)) {
+      const employee = assignment.employees as any
       employeeMap.set(assignment.employee_id, {
-        ...assignment.employees,
+        ...employee,
         job_title: assignment.job_titles?.name || 'N/A'
       })
     }

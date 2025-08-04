@@ -45,7 +45,7 @@ export default async function LocationsPage() {
       .select(`
         district_id,
         name,
-        market_id,
+        region_id,
         manager:employees!district_manager_employee_id (
           employee_id,
           first_name,
@@ -58,15 +58,15 @@ export default async function LocationsPage() {
       .from('regions')
       .select(`
         region_id,
-        name
+        name,
+        market_id
       `)
 
     const { data: markets } = await supabase
       .from('markets')
       .select(`
         market_id,
-        name,
-        region_id
+        name
       `)
 
     // Build lookup maps
@@ -74,7 +74,7 @@ export default async function LocationsPage() {
     const regionMap = new Map(regions?.map(r => [r.region_id, r]) || [])
     const marketMap = new Map(markets?.map(m => [m.market_id, m]) || [])
 
-    // Attach hierarchy to locations (Districts → Markets → Regions - new hierarchy)
+    // Attach hierarchy to locations (Locations → Districts → Regions → Markets)
     locations.forEach(loc => {
       const district = districtMap.get(loc.district_id)
       if (district) {
@@ -82,13 +82,13 @@ export default async function LocationsPage() {
           name: district.name,
           manager: district.manager
         }
-        const market = marketMap.get(district.market_id)
-        if (market) {
-          loc.districts.markets = { name: market.name }
-          // Markets have regions
-          const region = regionMap.get(market.region_id)
-          if (region) {
-            loc.districts.markets.regions = { name: region.name }
+        const region = regionMap.get(district.region_id)
+        if (region) {
+          loc.districts.regions = { name: region.name }
+          // Regions have markets
+          const market = marketMap.get(region.market_id)
+          if (market) {
+            loc.districts.regions.markets = { name: market.name }
           }
         }
       }

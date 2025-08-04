@@ -36,6 +36,8 @@ export default async function LocationsPage() {
     `)
     .order('name')
 
+  let locationsWithHierarchy = locations || []
+  
   if (!locError && locations) {
     // Fetch district info separately
     const districtIds = [...new Set(locations.map(l => l.district_id).filter(Boolean))]
@@ -74,24 +76,30 @@ export default async function LocationsPage() {
     const regionMap = new Map(regions?.map(r => [r.region_id, r]) || [])
     const marketMap = new Map(markets?.map(m => [m.market_id, m]) || [])
 
-    // Attach hierarchy to locations (Locations → Districts → Regions → Markets)
-    locations.forEach(loc => {
+    // Build locations with hierarchy (Locations → Districts → Regions → Markets)
+    locationsWithHierarchy = locations.map(loc => {
       const district = districtMap.get(loc.district_id)
       if (district) {
-        loc.districts = { 
-          name: district.name,
-          manager: district.manager
-        }
         const region = regionMap.get(district.region_id)
-        if (region) {
-          loc.districts.regions = { name: region.name }
-          // Regions have markets
-          const market = marketMap.get(region.market_id)
-          if (market) {
-            loc.districts.regions.markets = { name: market.name }
+        const market = region ? marketMap.get(region.market_id) : null
+        
+        return {
+          ...loc,
+          districts: { 
+            name: district.name,
+            manager: district.manager,
+            ...(region && {
+              regions: {
+                name: region.name,
+                ...(market && {
+                  markets: { name: market.name }
+                })
+              }
+            })
           }
         }
       }
+      return loc
     })
   }
 
@@ -112,7 +120,7 @@ export default async function LocationsPage() {
   }, {} as Record<number, number>) || {}
 
   // Add employee counts to locations
-  const locationsWithCounts = (locations || []).map(loc => ({
+  const locationsWithCounts = locationsWithHierarchy.map(loc => ({
     ...loc,
     employee_count: employeeCounts[loc.location_id] || 0
   }))

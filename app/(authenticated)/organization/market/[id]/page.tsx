@@ -35,27 +35,28 @@ export default async function MarketDetailPage({ params }: { params: Promise<{ i
     redirect('/organization')
   }
 
-  // Fetch parent region of this market (NEW hierarchy: markets belong to regions)
-  const { data: parentRegion } = await supabase
+  // Fetch regions that belong to this market
+  const { data: regions } = await supabase
     .from('regions')
     .select('*')
-    .eq('region_id', market.region_id)
-    .single()
+    .eq('market_id', marketId)
 
-  // Fetch districts in this market (NEW hierarchy: districts belong to markets)
-  const { data: districts } = await supabase
+  // Fetch districts that belong to regions in this market
+  const regionIds = regions?.map(r => r.region_id) || []
+  const { data: districts } = regionIds.length > 0 ? await supabase
     .from('districts')
     .select(`
       *,
-      manager:employees!district_manager_employee_id (
+      manager:employees!fk_districts_manager (
         employee_id,
         first_name,
         last_name
       )
     `)
-    .eq('market_id', marketId)
+    .in('region_id', regionIds)
     .eq('is_active', true)
     .order('name')
+  : { data: [] }
 
   // Get location counts per district
   const { data: locations } = await supabase
@@ -127,10 +128,17 @@ export default async function MarketDetailPage({ params }: { params: Promise<{ i
               <div>
                 <dt className="text-sm font-medium text-gray-500">Parent Region</dt>
                 <dd className="mt-1 text-sm text-gray-900">
-                  {parentRegion ? (
-                    <Link href={`/organization/region/${parentRegion.region_id}`} className="text-alliance-blue hover:text-alliance-navy">
-                      {parentRegion.name}
-                    </Link>
+                  {regions && regions.length > 0 ? (
+                    <div>
+                      {regions.map((region, index) => (
+                        <span key={region.region_id}>
+                          {index > 0 && ', '}
+                          <Link href={`/organization/region/${region.region_id}`} className="text-alliance-blue hover:text-alliance-navy">
+                            {region.name}
+                          </Link>
+                        </span>
+                      ))}
+                    </div>
                   ) : (
                     'None'
                   )}

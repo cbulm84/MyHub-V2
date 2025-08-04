@@ -57,8 +57,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Import error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
-      { error: 'Import failed', details: { errors: [error.message] } },
+      { error: 'Import failed', details: { errors: [errorMessage] } },
       { status: 500 }
     )
   }
@@ -81,7 +82,7 @@ async function importLocations(supabase: any, records: any[]): Promise<ImportRes
     .select('district_id')
     .in('district_id', districtIds)
   
-  const validDistrictIds = new Set(existingDistricts?.map(d => d.district_id) || [])
+  const validDistrictIds = new Set(existingDistricts?.map((d: any) => d.district_id) || [])
   
   // Check managers exist (if any specified)
   let validManagerIds = new Set()

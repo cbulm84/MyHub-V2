@@ -51,11 +51,23 @@ export default function NewOrganizationEntityPage() {
 
     try {
       if (entityType === 'market') {
+        // Get the next market_id
+        const { data: maxMarket } = await supabase
+          .from('markets')
+          .select('market_id')
+          .order('market_id', { ascending: false })
+          .limit(1)
+          .single()
+        
+        const nextMarketId = maxMarket ? maxMarket.market_id + 1 : 1
+        
         const { error } = await supabase
           .from('markets')
           .insert({ 
+            market_id: nextMarketId,
             name,
-            is_active: true
+            is_active: true,
+            metadata: {}
           })
         
         if (error) throw error
@@ -67,12 +79,24 @@ export default function NewOrganizationEntityPage() {
           return
         }
         
+        // Get the next region_id
+        const { data: maxRegion } = await supabase
+          .from('regions')
+          .select('region_id')
+          .order('region_id', { ascending: false })
+          .limit(1)
+          .single()
+        
+        const nextRegionId = maxRegion ? maxRegion.region_id + 1 : 1
+        
         const { error } = await supabase
           .from('regions')
           .insert({ 
+            region_id: nextRegionId,
             name, 
             market_id: parentId,
-            is_active: true
+            is_active: true,
+            metadata: {}
           })
         
         if (error) throw error
@@ -84,12 +108,24 @@ export default function NewOrganizationEntityPage() {
           return
         }
         
+        // Get the next district_id
+        const { data: maxDistrict } = await supabase
+          .from('districts')
+          .select('district_id')
+          .order('district_id', { ascending: false })
+          .limit(1)
+          .single()
+        
+        const nextDistrictId = maxDistrict ? maxDistrict.district_id + 1 : 1
+        
         const { error } = await supabase
           .from('districts')
           .insert({ 
+            district_id: nextDistrictId,
             name, 
             region_id: parentId,
-            is_active: true
+            is_active: true,
+            metadata: {}
           })
         
         if (error) throw error

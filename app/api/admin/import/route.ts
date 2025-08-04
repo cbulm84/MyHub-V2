@@ -91,7 +91,7 @@ async function importLocations(supabase: any, records: any[]): Promise<ImportRes
       .from('employees')
       .select('employee_id')
       .in('employee_id', managerIds)
-    validManagerIds = new Set(existingManagers?.map(e => e.employee_id) || [])
+    validManagerIds = new Set(existingManagers?.map((e: any) => e.employee_id) || [])
   }
 
   for (const record of records) {
@@ -155,7 +155,8 @@ async function importLocations(supabase: any, records: any[]): Promise<ImportRes
 
     } catch (error) {
       result.failed++
-      result.errors.push(`Location ${record.location_id}: ${error.message}`)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      result.errors.push(`Location ${record.location_id}: ${errorMessage}`)
     }
   }
 
@@ -181,7 +182,7 @@ async function importEmployees(supabase: any, records: any[]): Promise<ImportRes
     .from('user_types')
     .select('user_type_id')
     .in('user_type_id', userTypeIds)
-  const validUserTypeIds = new Set(existingUserTypes?.map(u => u.user_type_id) || [])
+  const validUserTypeIds = new Set(existingUserTypes?.map((u: any) => u.user_type_id) || [])
   
   // Check locations exist (for assignments)
   let validLocationIds = new Set()
@@ -190,7 +191,7 @@ async function importEmployees(supabase: any, records: any[]): Promise<ImportRes
       .from('locations')
       .select('location_id')
       .in('location_id', locationIds)
-    validLocationIds = new Set(existingLocations?.map(l => l.location_id) || [])
+    validLocationIds = new Set(existingLocations?.map((l: any) => l.location_id) || [])
   }
   
   // Check job titles exist (for assignments)
@@ -200,7 +201,7 @@ async function importEmployees(supabase: any, records: any[]): Promise<ImportRes
       .from('job_titles')
       .select('job_title_id')
       .in('job_title_id', jobTitleIds)
-    validJobTitleIds = new Set(existingJobTitles?.map(j => j.job_title_id) || [])
+    validJobTitleIds = new Set(existingJobTitles?.map((j: any) => j.job_title_id) || [])
   }
   
   // Check supervisors exist
@@ -210,7 +211,7 @@ async function importEmployees(supabase: any, records: any[]): Promise<ImportRes
       .from('employees')
       .select('employee_id')
       .in('employee_id', supervisorIds)
-    validSupervisorIds = new Set(existingSupervisors?.map(e => e.employee_id) || [])
+    validSupervisorIds = new Set(existingSupervisors?.map((e: any) => e.employee_id) || [])
   }
   
   // Check termination reasons exist
@@ -220,7 +221,7 @@ async function importEmployees(supabase: any, records: any[]): Promise<ImportRes
       .from('termination_reasons')
       .select('termination_reason_id')
       .in('termination_reason_id', terminationReasonIds)
-    validTerminationReasonIds = new Set(existingReasons?.map(t => t.termination_reason_id) || [])
+    validTerminationReasonIds = new Set(existingReasons?.map((t: any) => t.termination_reason_id) || [])
   }
 
   for (const record of records) {
@@ -325,7 +326,7 @@ async function importEmployees(supabase: any, records: any[]): Promise<ImportRes
 
     } catch (error) {
       result.failed++
-      result.errors.push(`Employee ${record.employee_id}: ${error.message}`)
+      result.errors.push(`Employee ${record.employee_id}: ${(error as Error).message}`)
     }
   }
 

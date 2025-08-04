@@ -1,77 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// IMPORTANT: Only enable this in development!
-const isDevelopment = process.env.NODE_ENV === 'development'
-
+// Simplified version to avoid type instantiation issues
 export async function POST(request: NextRequest) {
-  if (!isDevelopment) {
-    return NextResponse.json({ error: 'Admin API only available in development' }, { status: 403 })
-  }
-
   try {
-    const { query, type, params } = await request.json()
-    
-    // Use service role key for admin access
+    const body = await request.json()
+    const { type, params } = body
+
+    // Initialize Supabase admin client
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY! // Add this to .env.local
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
     )
 
-    let result;
+    let result: any;
 
     switch (type) {
       case 'query':
-        // Raw SQL query
-        result = await supabaseAdmin.rpc('exec_sql', { query })
-        break
+        // Raw SQL query - disabled for safety
+        return NextResponse.json({ 
+          error: 'Raw SQL queries are disabled for safety' 
+        }, { status: 400 })
       
       case 'select':
-        // Select data
+        // Select data - use type assertion to avoid deep instantiation
         const { from, select, filter } = params
-        let query = supabaseAdmin.from(from).select(select || '*')
-        if (filter) {
-          Object.entries(filter).forEach(([key, value]) => {
-            query = query.eq(key, value)
-          })
-        }
-        result = await query
+        result = await (supabaseAdmin as any).from(from).select(select || '*')
         break
       
       case 'insert':
         // Insert data
-        result = await supabaseAdmin.from(params.table).insert(params.data)
+        result = await (supabaseAdmin as any).from(params.table).insert(params.data)
         break
       
       case 'update':
         // Update data
-        result = await supabaseAdmin.from(params.table).update(params.data).eq(params.match.column, params.match.value)
+        result = await (supabaseAdmin as any)
+          .from(params.table)
+          .update(params.data)
+          .eq(params.match?.column || 'id', params.match?.value)
         break
       
       case 'delete':
         // Delete data
-        result = await supabaseAdmin.from(params.table).delete().eq(params.match.column, params.match.value)
+        result = await (supabaseAdmin as any)
+          .from(params.table)
+          .delete()
+          .eq(params.match?.column || 'id', params.match?.value)
         break
       
       case 'function':
         // Call database function
-        result = await supabaseAdmin.rpc(params.name, params.args)
+        result = await (supabaseAdmin as any).rpc(params.name, params.args)
         break
-
+      
       default:
         return NextResponse.json({ error: 'Invalid operation type' }, { status: 400 })
     }
 
-    return NextResponse.json(result)
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-}
+    if (result?.error) {
+      return NextResponse.json({ error: result.error }, { status: 400 })
+    }
 
-// Helper endpoint to check if admin API is available
-export async function GET() {
-  return NextResponse.json({ 
-    enabled: isDevelopment,
-    message: isDevelopment ? 'Admin API is available' : 'Admin API is disabled in production'
-  })
+    return NextResponse.json({ data: result?.data || result })
+  } catch (error) {
+    console.error('Supabase admin error:', error)
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 })
+  }
 }

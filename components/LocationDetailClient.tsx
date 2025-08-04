@@ -46,7 +46,7 @@ export default function LocationDetailClient({
     name: location.name,
     store_number: location.store_number || '',
     district_id: location.district_id || '',
-    phone: location.phone || '',
+    // phone: location.phone || '', // Phone is in addresses table
     is_active: location.is_active
   })
   const [isSaving, setIsSaving] = useState(false)
@@ -62,7 +62,7 @@ export default function LocationDetailClient({
       name: location.name,
       store_number: location.store_number || '',
       district_id: location.district_id || '',
-      phone: location.phone || '',
+      // phone: location.phone || '', // Phone is in addresses table
       is_active: location.is_active
     })
   }
@@ -199,18 +199,7 @@ export default function LocationDetailClient({
                       </select>
                     </div>
 
-                    <div>
-                      <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                        Phone
-                      </label>
-                      <input
-                        type="tel"
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-alliance-blue focus:ring-alliance-blue sm:text-sm"
-                      />
-                    </div>
+                    {/* Phone field removed - should be managed through addresses */}
                   </div>
 
                   <div className="flex items-center">
@@ -259,10 +248,7 @@ export default function LocationDetailClient({
                     <dt className="text-sm font-medium text-gray-500">Store Number</dt>
                     <dd className="mt-1 text-sm text-gray-900 font-semibold">{location.store_number || 'N/A'}</dd>
                   </div>
-                  <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                    <dt className="text-sm font-medium text-gray-500">Phone</dt>
-                    <dd className="mt-1 text-sm text-gray-900 font-semibold">{location.phone || 'N/A'}</dd>
-                  </div>
+                  {/* Phone field removed - should be managed through addresses */}
                   <div className="bg-gray-50 px-4 py-3 rounded-lg">
                     <dt className="text-sm font-medium text-gray-500">District</dt>
                     <dd className="mt-1 text-sm text-gray-900 font-semibold">{district?.name || 'N/A'}</dd>

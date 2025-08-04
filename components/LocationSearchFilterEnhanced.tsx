@@ -2,29 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Database } from '@/types/database'
+import { LocationWithDetails } from '@/types/extended'
 import ModernPagination from './ModernPagination'
-
-type Location = Database['public']['Tables']['locations']['Row']
-type LocationWithDetails = Location & {
-  districts?: { 
-    name: string
-    manager?: {
-      employee_id: number
-      first_name: string
-      last_name: string
-    } | null
-    markets?: { 
-      name: string 
-    }
-  }
-  manager?: {
-    employee_id: number
-    first_name: string
-    last_name: string
-  } | null
-  employee_count?: number
-}
 
 interface LocationSearchFilterProps {
   locations: LocationWithDetails[]
@@ -73,7 +52,7 @@ export default function LocationSearchFilterEnhanced({ locations, canEdit }: Loc
         
         // Hierarchy information - District/Market only
         (loc.districts?.name && loc.districts.name.toLowerCase().includes(search)) ||
-        (loc.districts?.markets?.name && loc.districts.markets.name.toLowerCase().includes(search)) ||
+        (loc.districts?.regions?.markets?.name && loc.districts.regions.markets.name.toLowerCase().includes(search)) ||
         
         // Manager information
         (loc.manager?.first_name && loc.manager.first_name.toLowerCase().includes(search)) ||
@@ -322,9 +301,9 @@ export default function LocationSearchFilterEnhanced({ locations, canEdit }: Loc
                         {location.districts ? (
                           <div>
                             <div className="font-medium text-gray-900 group-hover:text-white break-words">{location.districts.name}</div>
-                            {location.districts.markets && (
+                            {location.districts.regions?.markets && (
                               <div className="text-xs text-gray-500 group-hover:text-gray-200 break-words">
-                                {location.districts.markets.name}
+                                {location.districts.regions.markets.name}
                               </div>
                             )}
                           </div>
@@ -433,8 +412,8 @@ export default function LocationSearchFilterEnhanced({ locations, canEdit }: Loc
                 <div className="col-span-2">
                   <p className="text-gray-500 font-medium">District/Market</p>
                   <p className="text-gray-900">{location.districts?.name || 'No District'}</p>
-                  {location.districts?.markets && (
-                    <p className="text-xs text-gray-500">{location.districts.markets.name}</p>
+                  {location.districts?.regions?.markets && (
+                    <p className="text-xs text-gray-500">{location.districts.regions.markets.name}</p>
                   )}
                 </div>
               </div>
@@ -516,10 +495,10 @@ export default function LocationSearchFilterEnhanced({ locations, canEdit }: Loc
                       <span className="text-sm font-medium text-gray-500">District</span>
                       <span className="text-sm text-gray-900">{selectedLocation.districts?.name || 'No District'}</span>
                     </div>
-                    {selectedLocation.districts?.markets && (
+                    {selectedLocation.districts?.regions?.markets && (
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
                         <span className="text-sm font-medium text-gray-500">Market</span>
-                        <span className="text-sm text-gray-900">{selectedLocation.districts.markets.name}</span>
+                        <span className="text-sm text-gray-900">{selectedLocation.districts.regions.markets.name}</span>
                       </div>
                     )}
                     <div className="flex justify-between items-center py-2 border-b border-gray-100">

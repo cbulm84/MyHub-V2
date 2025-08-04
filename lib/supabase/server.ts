@@ -62,10 +62,11 @@ export async function getCurrentEmployee() {
     .eq('employee_id', employee.employee_id)
     .eq('is_current', true)
     
-  // Add current assignments to employee object
-  employee.current_assignments = assignments || []
-    
-  return employee
+  // Return employee with current assignments
+  return {
+    ...employee,
+    current_assignments: assignments || []
+  }
 }
 
 // Permission helper functions

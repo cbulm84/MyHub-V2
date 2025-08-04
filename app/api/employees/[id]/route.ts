@@ -127,7 +127,7 @@ export async function DELETE(
     if (employee.auth_user_id) {
       const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
         employee.auth_user_id,
-        { banned: true }
+        { ban_duration: 'none' }
       )
 
       if (authError) {

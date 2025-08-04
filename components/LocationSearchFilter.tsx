@@ -2,32 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Database } from '@/types/database'
-import ModernPagination from './ModernPagination'
-
-type Location = Database['public']['Tables']['locations']['Row']
-type LocationWithDetails = Location & {
-  districts?: { 
-    name: string
-    manager?: {
-      employee_id: number
-      first_name: string
-      last_name: string
-    } | null
-    regions?: { 
-      name: string
-      markets?: { 
-        name: string 
-      }
-    }
-  }
-  manager?: {
-    employee_id: number
-    first_name: string
-    last_name: string
-  } | null
-  employee_count?: number
-}
+import { LocationWithDetails } from '@/types/extended'
+import ModernPaginationSimple from './ModernPaginationSimple'
 
 interface LocationSearchFilterProps {
   locations: LocationWithDetails[]
@@ -50,13 +26,13 @@ export default function LocationSearchFilter({ locations, canEdit }: LocationSea
         (loc.store_number && loc.store_number.toLowerCase().includes(search)) ||
         loc.location_id.toString().includes(searchTerm) ||
         
-        // Address and contact info
-        (loc.address_line_1 && loc.address_line_1.toLowerCase().includes(search)) ||
-        (loc.address_line_2 && loc.address_line_2.toLowerCase().includes(search)) ||
-        (loc.city && loc.city.toLowerCase().includes(search)) ||
-        (loc.state && loc.state.toLowerCase().includes(search)) ||
-        (loc.zip_code && loc.zip_code.includes(searchTerm)) ||
-        (loc.phone && loc.phone.includes(searchTerm)) ||
+        // Address and contact info from joined addresses table
+        (loc.addresses?.street_line1 && loc.addresses.street_line1.toLowerCase().includes(search)) ||
+        (loc.addresses?.street_line2 && loc.addresses.street_line2.toLowerCase().includes(search)) ||
+        (loc.addresses?.city && loc.addresses.city.toLowerCase().includes(search)) ||
+        (loc.addresses?.state_province && loc.addresses.state_province.toLowerCase().includes(search)) ||
+        (loc.addresses?.postal_code && loc.addresses.postal_code.includes(searchTerm)) ||
+        (loc.addresses?.phone && loc.addresses.phone.includes(searchTerm)) ||
         
         // Hierarchy information
         (loc.districts?.name && loc.districts.name.toLowerCase().includes(search)) ||
@@ -67,356 +43,306 @@ export default function LocationSearchFilter({ locations, canEdit }: LocationSea
         (loc.manager?.first_name && loc.manager.first_name.toLowerCase().includes(search)) ||
         (loc.manager?.last_name && loc.manager.last_name.toLowerCase().includes(search)) ||
         (loc.districts?.manager?.first_name && loc.districts.manager.first_name.toLowerCase().includes(search)) ||
-        (loc.districts?.manager?.last_name && loc.districts.manager.last_name.toLowerCase().includes(search)) ||
-        
-        // Employee count
-        (loc.employee_count && loc.employee_count.toString().includes(searchTerm)) ||
-        
-        // Status
-        (loc.is_active && 'active'.includes(search)) ||
-        (!loc.is_active && 'inactive'.includes(search)) ||
-        
-        // Store number variations
-        (loc.store_number && `store ${loc.store_number}`.includes(search)) ||
-        (loc.store_number && `#${loc.store_number}`.includes(search))
+        (loc.districts?.manager?.last_name && loc.districts.manager.last_name.toLowerCase().includes(search))
       )
-
-      const matchesStatus = statusFilter === 'all' || 
+      
+      const matchesStatus = 
+        statusFilter === 'all' || 
         (statusFilter === 'active' && loc.is_active) ||
         (statusFilter === 'inactive' && !loc.is_active)
-
+      
       return matchesSearch && matchesStatus
     })
-
-    // Sort by store number, then by name
-    filtered.sort((a, b) => {
-      if (a.store_number && b.store_number) {
-        return a.store_number.localeCompare(b.store_number)
+    
+    return filtered.sort((a, b) => {
+      // Sort by district, then location name
+      if (a.districts?.name && b.districts?.name) {
+        const districtCompare = a.districts.name.localeCompare(b.districts.name)
+        if (districtCompare !== 0) return districtCompare
       }
       return a.name.localeCompare(b.name)
     })
-
-    return filtered
   }, [locations, searchTerm, statusFilter])
 
   const totalPages = Math.ceil(filteredAndSortedLocations.length / itemsPerPage)
-  const paginatedLocations = filteredAndSortedLocations.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedLocations = filteredAndSortedLocations.slice(startIndex, startIndex + itemsPerPage)
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleItemsPerPageChange = (newItemsPerPage: number) => {
-    setItemsPerPage(newItemsPerPage)
-    setCurrentPage(1) // Reset to first page
-  }
-
-  const handleStatusFilterChange = (newStatus: 'all' | 'active' | 'inactive') => {
-    setStatusFilter(newStatus)
-    setCurrentPage(1) // Reset to first page
-  }
-
   return (
-    <>
-      {/* Search and Filters */}
-      <div className="mt-6 space-y-4">
-        {/* Search Bar */}
-        <div>
-          <input
-            type="text"
-            placeholder="Search locations by name, store number, district, hierarchy, address, phone, or any visible information..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-alliance-blue focus:ring-alliance-blue sm:text-sm"
-          />
-        </div>
-
-        {/* Status Filter */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">Status:</span>
-            <div className="flex rounded-lg border border-gray-300 bg-gray-50 p-1">
-              <button
-                onClick={() => handleStatusFilterChange('active')}
-                className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
-                  statusFilter === 'active'
-                    ? 'bg-white text-alliance-blue shadow-sm border border-alliance-blue'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Active
-              </button>
-              <button
-                onClick={() => handleStatusFilterChange('inactive')}
-                className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
-                  statusFilter === 'inactive'
-                    ? 'bg-white text-alliance-blue shadow-sm border border-alliance-blue'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Inactive
-              </button>
-              <button
-                onClick={() => handleStatusFilterChange('all')}
-                className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
-                  statusFilter === 'all'
-                    ? 'bg-white text-alliance-blue shadow-sm border border-alliance-blue'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                All
-              </button>
-            </div>
-          </div>
-
-          {/* Results Summary */}
-          <div className="text-sm text-gray-600">
-            {filteredAndSortedLocations.length} location{filteredAndSortedLocations.length !== 1 ? 's' : ''} found
-            {statusFilter !== 'all' && (
-              <span className="ml-1">
-                ({statusFilter === 'active' ? 'active' : 'inactive'} only)
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Desktop Table - Hidden on mobile */}
-      <div className="mt-8 flex-col hidden lg:flex">
-        <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-            <div className="overflow-hidden shadow-lg ring-1 ring-alliance-blue ring-opacity-20 md:rounded-xl border border-gray-200">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-[#1B4278]">
-                  <tr>
-                    <th className="px-4 py-4 text-left text-sm font-semibold text-white tracking-wider">
-                      Store #
-                    </th>
-                    <th className="px-4 py-4 text-left text-sm font-semibold text-white tracking-wider">
-                      Name
-                    </th>
-                    <th className="px-4 py-4 text-left text-sm font-semibold text-white tracking-wider">
-                      Manager
-                    </th>
-                    <th className="px-4 py-4 text-left text-sm font-semibold text-white tracking-wider">
-                      District/Region
-                    </th>
-                    <th className="px-4 py-4 text-left text-sm font-semibold text-white tracking-wider">
-                      Address
-                    </th>
-                    <th className="px-4 py-4 text-left text-sm font-semibold text-white tracking-wider">
-                      Employees
-                    </th>
-                    <th className="px-4 py-4 text-left text-sm font-semibold text-white tracking-wider">
-                      Status
-                    </th>
-                    <th className="relative py-4 pl-3 pr-6">
-                      <span className="sr-only text-white">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
-                  {paginatedLocations.map((location) => (
-                    <tr key={location.id} className="group hover:bg-alliance-navy transition-all duration-200">
-                      <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-900 group-hover:text-white">
-                        {location.store_number || 'N/A'}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-900 group-hover:text-white">
-                        {location.name}
-                      </td>
-                      <td className="px-4 py-4 text-sm">
-                        {location.manager ? (
-                          <div className="text-gray-900 group-hover:text-white">
-                            {location.manager.first_name} {location.manager.last_name}
-                          </div>
-                        ) : (
-                          <span className="text-gray-500 italic group-hover:text-gray-200">No Manager</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-4 text-sm">
-                        {location.districts ? (
-                          <div>
-                            <div className="font-medium text-gray-900 group-hover:text-white">{location.districts.name}</div>
-                            {location.districts.regions && (
-                              <div className="text-xs text-gray-500 group-hover:text-gray-200">
-                                {location.districts.regions.name}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-gray-500 italic group-hover:text-gray-200">No District</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-4 text-sm">
-                        <div className="text-gray-900 group-hover:text-white">
-                          {location.address_line_1 && (
-                            <div className="text-sm">{location.address_line_1}</div>
-                          )}
-                          {location.city && location.state && (
-                            <div className="text-xs text-gray-500 group-hover:text-gray-200">
-                              {location.city}, {location.state} {location.zip_code}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-sm">
-                        <span className="font-medium text-gray-900 group-hover:text-white">{location.employee_count || 0}</span>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-sm">
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                          location.is_active 
-                            ? 'bg-green-100 text-green-800 group-hover:bg-white group-hover:bg-opacity-20 group-hover:text-white' 
-                            : 'bg-red-100 text-red-800 group-hover:bg-white group-hover:bg-opacity-20 group-hover:text-white'
-                        }`}>
-                          {location.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="relative whitespace-nowrap py-4 pl-4 pr-6 text-right text-sm font-medium">
-                        <div className="flex justify-end space-x-2">
-                          <Link
-                            href={`/locations/${location.location_id}`}
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md text-white bg-[#1B4278] hover:bg-[#94C83D] transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1B4278]"
-                          >
-                            View
-                          </Link>
-                          {canEdit && (
-                            <Link
-                              href={`/locations/${location.location_id}/edit`}
-                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-alliance-blue hover:bg-alliance-navy transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-alliance-blue"
-                            >
-                              Edit
-                            </Link>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {paginatedLocations.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  {filteredAndSortedLocations.length === 0 ? 'No locations found' : 'No locations on this page'}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Modern Pagination for Desktop */}
-        {filteredAndSortedLocations.length > 0 && (
-          <ModernPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            itemsPerPage={itemsPerPage}
-            totalItems={filteredAndSortedLocations.length}
-            onPageChange={handlePageChange}
-            onItemsPerPageChange={handleItemsPerPageChange}
-          />
-        )}
-      </div>
-
-      {/* Mobile Card Layout - Visible on mobile only */}
-      <div className="mt-8 lg:hidden space-y-4">
-        {paginatedLocations.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 bg-white rounded-lg shadow">
-            {filteredAndSortedLocations.length === 0 ? 'No locations found' : 'No locations on this page'}
-          </div>
-        ) : (
-          paginatedLocations.map((location) => (
-            <div key={location.id} className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {location.name}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    Store #{location.store_number || 'N/A'}
-                  </p>
-                </div>
-                <div className="flex flex-col space-y-1">
-                  <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                    location.is_active 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {location.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                <div>
-                  <p className="text-gray-500 font-medium">Manager</p>
-                  {location.manager ? (
-                    <p className="text-gray-900">{location.manager.first_name} {location.manager.last_name}</p>
-                  ) : (
-                    <p className="text-gray-500 italic">No Manager</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-gray-500 font-medium">Employees</p>
-                  <p className="text-gray-900 font-medium">{location.employee_count || 0}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500 font-medium">District</p>
-                  <p className="text-gray-900">{location.districts?.name || 'No District'}</p>
-                  {location.districts?.regions && (
-                    <p className="text-xs text-gray-500">{location.districts.regions.name}</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-gray-500 font-medium">Address</p>
-                  {location.address_line_1 ? (
-                    <div>
-                      <p className="text-gray-900 text-xs">{location.address_line_1}</p>
-                      {location.city && location.state && (
-                        <p className="text-xs text-gray-500">{location.city}, {location.state} {location.zip_code}</p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 italic">No Address</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-3 border-t border-gray-100">
-                <Link
-                  href={`/locations/${location.location_id}`}
-                  className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-[#1B4278] hover:bg-[#94C83D] transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1B4278]"
-                >
-                  View
-                </Link>
-                {canEdit && (
-                  <Link
-                    href={`/locations/${location.location_id}/edit`}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-alliance-blue hover:bg-alliance-navy transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-alliance-blue"
-                  >
-                    Edit
-                  </Link>
-                )}
-              </div>
-            </div>
-          ))
-        )}
-
-        {/* Modern Pagination for Mobile */}
-        {filteredAndSortedLocations.length > 0 && (
-          <div className="mt-6">
-            <ModernPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              itemsPerPage={itemsPerPage}
-              totalItems={filteredAndSortedLocations.length}
-              onPageChange={handlePageChange}
-              onItemsPerPageChange={handleItemsPerPageChange}
+    <div className="space-y-4">
+      {/* Search and Filter Controls */}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="md:col-span-2">
+            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+              Search locations
+            </label>
+            <input
+              type="text"
+              id="search"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Search by name, store #, address, manager..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                setCurrentPage(1)
+              }}
             />
           </div>
-        )}
+          
+          <div>
+            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
+            <select
+              id="status"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')
+                setCurrentPage(1)
+              }}
+            >
+              <option value="all">All Locations</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
+            </select>
+          </div>
+          
+          <div>
+            <label htmlFor="perPage" className="block text-sm font-medium text-gray-700 mb-1">
+              Per Page
+            </label>
+            <select
+              id="perPage"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value))
+                setCurrentPage(1)
+              }}
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+        </div>
+        
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-sm text-gray-700">
+            Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredAndSortedLocations.length)} of{' '}
+            {filteredAndSortedLocations.length} locations
+          </p>
+          {canEdit && (
+            <Link
+              href="/locations/new"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Add New Location
+            </Link>
+          )}
+        </div>
       </div>
-    </>
+
+      {/* Results */}
+      {paginatedLocations.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+          <p className="text-gray-500">No locations found matching your criteria.</p>
+        </div>
+      ) : (
+        <>
+          {/* Desktop View */}
+          <div className="hidden md:block bg-white rounded-lg shadow-sm overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Store #
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Location Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Address
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Manager
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    District
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {paginatedLocations.map((location) => (
+                  <tr key={location.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {location.store_number || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{location.name}</div>
+                      <div className="text-sm text-gray-500">ID: {location.location_id}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">
+                        {location.addresses ? (
+                          <>
+                            <p>{location.addresses.street_line1}</p>
+                            {location.addresses.street_line2 && <p>{location.addresses.street_line2}</p>}
+                            <p>
+                              {location.addresses.city}, {location.addresses.state_province} {location.addresses.postal_code}
+                            </p>
+                          </>
+                        ) : (
+                          <span className="text-gray-400">No address</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {location.manager ? (
+                        <div className="text-sm text-gray-900">
+                          {location.manager.first_name} {location.manager.last_name}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">No manager</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">
+                        {location.districts?.name || '-'}
+                        {location.districts?.regions?.name && (
+                          <div className="text-xs text-gray-500">{location.districts.regions.name}</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          location.is_active
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {location.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <Link
+                        href={`/locations/${location.location_id}`}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        View
+                      </Link>
+                      {canEdit && (
+                        <>
+                          <span className="mx-2 text-gray-300">|</span>
+                          <Link
+                            href={`/locations/${location.location_id}/edit`}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            Edit
+                          </Link>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile View */}
+          <div className="md:hidden space-y-4">
+            {paginatedLocations.map((location) => (
+              <div key={location.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div className="px-6 py-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900">{location.name}</h3>
+                      <p className="text-sm text-gray-500">Store #{location.store_number || 'N/A'}</p>
+                    </div>
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        location.is_active
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {location.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  
+                  {location.addresses && (
+                    <div className="mt-2 text-sm text-gray-600">
+                      <p>{location.addresses.street_line1}</p>
+                      {location.addresses.street_line2 && <p>{location.addresses.street_line2}</p>}
+                      <p>
+                        {location.addresses.city}, {location.addresses.state_province} {location.addresses.postal_code}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                    {location.manager && (
+                      <div>
+                        <span className="font-medium text-gray-700">Manager:</span>
+                        <p className="text-gray-900">
+                          {location.manager.first_name} {location.manager.last_name}
+                        </p>
+                      </div>
+                    )}
+                    {location.districts && (
+                      <div>
+                        <span className="font-medium text-gray-700">District:</span>
+                        <p className="text-gray-900">{location.districts.name}</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="mt-4 flex space-x-3">
+                    <Link
+                      href={`/locations/${location.location_id}`}
+                      className="flex-1 text-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      View Details
+                    </Link>
+                    {canEdit && (
+                      <Link
+                        href={`/locations/${location.location_id}/edit`}
+                        className="flex-1 text-center px-3 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+                      >
+                        Edit
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <ModernPaginationSimple
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          )}
+        </>
+      )}
+    </div>
   )
 }
